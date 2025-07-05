@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diabetes en Guayas - Proyecto de Epidemiología</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --rojo: #FF6B6B;
+            --naranja: #FFA502;
+            --verde: #51CF66;
+            --azul: #339AF0;
+            --morado: #9C36B5;
+            --dark: #2F3640;
+        }
+        
+        /* INTRODUCCIÓN */
+        .intro-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            flex-direction: column;
+            text-align: center;
+            padding: 20px;
+            font-family: 'Comic Neue', cursive;
+        }
+        
+        .intro-content {
+            max-width: 800px;
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid var(--azul);
+            animation: fadeIn 1.5s;
+        }
+        
+        .intro-btn {
+            background: var(--azul);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        
+        .intro-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(51, 154, 240, 0.6);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* ESTILOS PRINCIPALES */
+        body {
+            font-family: 'Comic Neue', cursive;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+        }
+        
+        header {
+            background: linear-gradient(to right, var(--morado), var(--azul));
+            color: white;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            animation: pulse 8s infinite linear;
+        }
+        
+        @keyframes pulse {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2.2em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            margin-top: 5px;
+            position: relative;
+        }
+        
+        .container {
+            display: flex;
+            height: calc(100vh - 120px);
+        }
+        
+        #map {
+            flex: 3;
+            height: 100%;
+            z-index: 1;
+            border-right: 3px dashed var(--azul);
+            transition: all 0.3s;
+        }
+        
+        .sidebar {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            border: 2px solid var(--azul);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tab {
+            overflow: hidden;
+            border: 2px solid var(--azul);
+            background: linear-gradient(to right, #f8f9fa, #e9ecef);
+            border-radius: 15px 15px 0 0;
+        }
+        
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 12px 16px;
+            transition: 0.3s;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .tab button:hover {
+            background-color: #ddd;
+        }
+        
+        .tab button.active {
+            background: var(--azul);
+            color: white;
+        }
+        
+        .tabcontent {
+            display: none;
+            padding: 15px;
+            border: 2px solid var(--azul);
+            border-top: none;
+            border-radius: 0 0 15px 15px;
+            animation: fadeEffect 0.5s;
+            background: white;
+        }
+        
+        @keyframes fadeEffect {
+            from {opacity: 0; transform: translateY(10px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+        
+        .data-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-left: 5px solid var(--rojo);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+        
+        .data-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .solution-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-left: 5px solid var(--verde);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .solution-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 15px;
+            background: var(--azul);
+            color: white;
+            border-radius: 50px;
+            text-decoration: none;
+            margin-top: 10px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+        }
+        
+        .btn-rojo {
+            background: var(--rojo);
+        }
+        
+        .btn-verde {
+            background: var(--verde);
+        }
+        
+        .btn-morado {
+            background: var(--morado);
+        }
+        
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            border: 2px solid var(--morado);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .legend-item:hover {
+            transform: translateX(5px);
+        }
+        
+        .legend-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .legend-item:hover .legend-icon {
+            transform: scale(1.2);
+        }
+        
+        .emoji {
+            font-size: 24px;
+            margin-right: 10px;
+            vertical-align: middle;
+            transition: all 0.3s;
+        }
+        
+        .data-card:hover .emoji, .solution-card:hover .emoji {
+            transform: rotate(10deg) scale(1.2);
+        }
+        
+        footer {
+            background: linear-gradient(to right, var(--dark), var(--morado));
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+            position: relative;
+        }
+        
+        footer::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,0 L100,0 L100,100 Q50,80 0,100 Z" fill="rgba(255,255,255,0.1)"/></svg>');
+            background-size: 100% 100%;
+            opacity: 0.3;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .quiz-container {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 20px;
+            border: 2px dashed var(--naranja);
+            transition: all 0.3s;
+        }
+        
+        .quiz-container:hover {
+            border: 2px solid var(--naranja);
+            background: #fff;
+        }
+        
+        .quiz-question {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .quiz-option {
+            margin: 5px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #ddd;
+        }
+        
+        .quiz-option:hover {
+            background: var(--azul);
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            margin: 15px 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--dark);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--verde);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .progress-container {
+            width: 100%;
+            background-color: #f1f1f1;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            border-radius: 10px;
+            background-color: var(--azul);
+            width: 0;
+            transition: width 1s ease-in-out;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            #map {
+                height: 400px;
+                border-right: none;
+                border-bottom: 3px dashed var(--azul);
+            }
+            
+            .sidebar {
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- INTRODUCCIÓN -->
+    <div class="intro-container">
+        <div class="intro-content">
+            <h1 style="color: #339AF0; font-size: 2.5em; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                <i class="fas fa-chart-line" style="margin-right: 15px;"></i>Diabetes en Guayas
+            </h1>
+            
+            <p style="font-size: 1.2em; line-height: 1.6; margin-bottom: 20px;">
+                Proyecto interactivo que analiza la situación epidemiológica de la diabetes mellitus en los principales cantones de la provincia del Guayas, Ecuador. Visualizamos datos clave sobre prevalencia, factores de riesgo y recursos disponibles para la prevención.
+            </p>
+            
+            <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px; margin: 20px 0;">
+                <h3 style="color: #51CF66; margin-top: 0;"><i class="fas fa-bullseye"></i> Objetivos</h3>
+                <ul style="text-align: left; padding-left: 20px;">
+                    <li>Identificar áreas de alto riesgo epidemiológico</li>
+                    <li>Visualizar recursos de salud disponibles</li>
+                    <li>Promover hábitos de vida saludables</li>
+                    <li>Facilitar el acceso a información verificada</li>
+                </ul>
+            </div>
+            
+            <button class="intro-btn" onclick="this.parentNode.parentNode.remove()">
+                <i class="fas fa-map-marked-alt" style="margin-right: 8px;"></i> Explorar el Mapa
+            </button>
+        </div>
+        
+        <p style="margin-top: 30px; font-size: 0.9em; color: #aaa;">
+            <i class="fas fa-user-graduate"></i> Valeska Mayte Andrade Peña - 4to A1 Fisioterapia<br>
+            <i class="fas fa-chalkboard-teacher"></i> Dra. Johanna Hidalgo Guevara<br>
+            <i class="fas fa-book"></i> Epidemiología - Examen Práctico
+        </p>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <header>
+        <h1><span class="emoji">💉</span> Diabetes en Guayas <span class="emoji">🍎</span></h1>
+        <div class="subtitle">¡Descubre los riesgos y soluciones en tu comunidad!</div>
+    </header>
+    
+    <div class="container">
+        <div id="map"></div>
+        
+        <div class="sidebar">
+            <div class="info-panel">
+                <h2><span class="emoji">📊</span> Datos Clave</h2>
+                
+                <div class="tab">
+                    <button class="tablinks active" onclick="openTab(event, 'indicadores')"><i class="fas fa-chart-line"></i> Números</button>
+                    <button class="tablinks" onclick="openTab(event, 'riesgos')"><i class="fas fa-exclamation-triangle"></i> Riesgos</button>
+                    <button class="tablinks" onclick="openTab(event, 'soluciones')"><i class="fas fa-lightbulb"></i> Soluciones</button>
+                </div>
+                
+                <div id="indicadores" class="tabcontent" style="display: block;">
+                    <div class="data-card pulse" onclick="showNotification('¡Cada 18 personas en Ecuador tiene diabetes!')">
+                        <h3><span class="emoji">🩺</span> ¡Cada 18 personas en Ecuador tiene diabetes!</h3>
+                        <p>Según la Encuesta STEPS (2018), la prevalencia nacional es del <strong>5.53%</strong>.</p>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="progress1"></div>
+                        </div>
+                        <button class="btn" onclick="animateProgress('progress1', 55)">Ver progreso</button>
+                    </div>
+                    
+                    <div class="data-card" onclick="showNotification('En 2013 hubo 4,695 muertes por diabetes en Ecuador')">
+                        <h3><span class="emoji">💀</span> Mortalidad</h3>
+                        <p>En 2013 hubo <strong>4,695</strong> muertes por diabetes en Ecuador.</p>
+                        <button class="btn btn-rojo" onclick="showMortalityChart()">Ver gráfico</button>
+                    </div>
+                </div>
+                
+                <div id="riesgos" class="tabcontent">
+                    <div class="data-card" onclick="flyTo('Guayaquil')">
+                        <h3><span class="emoji">🏙️</span> Problemas en Guayaquil</h3>
+                        <p>Con 2.7 millones de habitantes y densidad de 2,473 hab/km², hay:</p>
+                        <ul>
+                            <li>Desigualdad social</li>
+                            <li>Acceso limitado a comida saludable</li>
+                            <li>Falta de espacios para ejercicio</li>
+                        </ul>
+                        <button class="btn" onclick="showRiskFactors()">Factores de riesgo</button>
+                    </div>
+                    
+                    <div class="data-card" onclick="showFoodWarning()">
+                        <h3><span class="emoji">🍔</span> ¡Cuidado con lo que comes!</h3>
+                        <p>En Guayas se consumen muchos alimentos con:</p>
+                        <div style="display: flex; justify-content: space-between; margin: 10px 0;">
+                            <span class="tooltip" style="color: var(--rojo);">🍬 Azúcares<span class="tooltiptext">Aumentan el riesgo de diabetes tipo 2</span></span>
+                            <span class="tooltip" style="color: var(--naranja);">🍟 Grasas<span class="tooltiptext">Contribuyen a la obesidad</span></span>
+                            <span class="tooltip" style="color: var(--morado);">🧂 Sal<span class="tooltiptext">Afecta la presión arterial</span></span>
+                        </div>
+                        <button class="btn" onclick="showNutritionGuide()">Guía nutricional</button>
+                    </div>
+                </div>
+                
+                <div id="soluciones" class="tabcontent">
+                    <div class="solution-card" onclick="highlightHealthCenters()">
+                        <h3><span class="emoji">🏥</span> ¡Tamizajes gratuitos!</h3>
+                        <p>El MSP ofrece detección temprana de diabetes. ¿Dónde?</p>
+                        <div class="tamizaje-links">
+                            <p><strong>Samborondón:</strong> <a href="https://www.paho.org/es/tag/perfiles-carga-enfermedad-diabetes-2023?page=1" target="_blank">Info PAHO</a> | <a href="https://www.paho.org/es/datos-estadisticos?page=1" target="_blank">Estadísticas</a></p>
+                            <p><strong>Durán:</strong> <a href="https://www.elcomercio.com/sociedad/ministerio-salud-implementa-programa-atencion-diabetes-mellitus/" target="_blank">Noticia</a> | <a href="https://www.iess.gob.ec/noticias/-/asset_publisher/4DHq/content/hospital-basico-duran-en-pie-de-lucha-contra-la-diabetes/10174" target="_blank">Hospital Duran</a></p>
+                            <p><strong>Guayaquil:</strong> <a href="https://extranet.who.int/ncdccs/Data/ECU_D1_protocolo%20coordinaciones.pdf" target="_blank">Protocolo</a></p>
+                        </div>
+                        <button class="btn btn-verde" onclick="highlightHealthCenters()">Ver centros en el mapa</button>
+                    </div>
+                    
+                    <div class="solution-card" onclick="highlightParks()">
+                        <h3><span class="emoji">🚶‍♂️</span> ¡Muévete más!</h3>
+                        <p>Estos parques son ideales para ejercicio:</p>
+                        <ul>
+                            <li>Parque Samanes</li>
+                            <li>Malecón 2000</li>
+                            <li>Parque Seminario</li>
+                        </ul>
+                        <button class="btn btn-verde" onclick="highlightParks()">Ver en el mapa</button>
+                    </div>
+                    
+                    <div class="solution-card" onclick="showVideo()">
+                        <h3><span class="emoji">📺</span> Video Educativo</h3>
+                        <p>Aprende sobre prevención de diabetes:</p>
+                        <div class="video-container">
+                            <iframe src="https://www.youtube.com/embed/GntGIOBI6kg" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                        <button class="btn btn-morado" onclick="showVideoFullscreen()">Ver pantalla completa</button>
+                    </div>
+                    
+                    <div class="solution-card" onclick="showMarkets()">
+                        <h3><span class="emoji">🛒</span> Mercados Saludables</h3>
+                        <p>Encuentra opciones de alimentación saludable:</p>
+                        <div class="mercado-links">
+                            <p><strong>Samborondón:</strong> <a href="https://fundaciondelcorazon.com/nutricion/dieta/1252-dieta-para-la-diabetes.html" target="_blank">Dieta diabetes</a> | <a href="https://www.mayoclinic.org/es/diseases-conditions/diabetes/in-depth/diabetes-diet/art-20044295" target="_blank">Guía Mayo Clinic</a></p>
+                            <p><strong>Guayaquil:</strong> <a href="https://www.salud.gob.ec/wp-content/uploads/2013/11/GUIA-DE-ALIMENTACION-PADRES-DE-FAMILIA-jul2017.pdf" target="_blank">Guía alimentación</a></p>
+                            <p><strong>General:</strong> <a href="https://www.salud.gob.ec/wp-content/uploads/2021/03/Manual_Mercados_Saludables_final-25.04.2016.pdf" target="_blank">Manual mercados</a></p>
+                        </div>
+                        <button class="btn btn-verde" onclick="highlightMarkets()">Ver mercados en mapa</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="legend">
+                <h3><span class="emoji">🗺️</span> ¿Qué significa cada color?</h3>
+                
+                <div class="legend-item" onclick="filterMarkers('red')">
+                    <div class="legend-icon" style="background: var(--rojo);">!</div>
+                    <span>Alto riesgo de diabetes</span>
+                </div>
+                
+                <div class="legend-item" onclick="filterMarkers('orange')">
+                    <div class="legend-icon" style="background: var(--naranja);">⚠</div>
+                    <span>Riesgo medio</span>
+                </div>
+                
+                <div class="legend-item" onclick="filterMarkers('green')">
+                    <div class="legend-icon" style="background: var(--verde);">✓</div>
+                    <span>Bajo riesgo</span>
+                </div>
+                
+                <div class="legend-item" onclick="filterMarkers('blue')">
+                    <div class="legend-icon" style="background: var(--azul);"><i class="fas fa-hospital"></i></div>
+                    <span>Centros de salud</span>
+                </div>
+                
+                <div class="legend-item" onclick="filterMarkers('purple')">
+                    <div class="legend-icon" style="background: var(--morado);"><i class="fas fa-shopping-basket"></i></div>
+                    <span>Mercados saludables</span>
+                </div>
+                
+                <div class="legend-item" onclick="filterMarkers('dark')">
+                    <div class="legend-icon" style="background: var(--dark);"><i class="fas fa-industry"></i></div>
+                    <span>Zonas contaminadas</span>
+                </div>
+            </div>
+            
+            <div class="quiz-container">
+                <h3><span class="emoji">🧠</span> Pon a prueba tu conocimiento</h3>
+                <div class="quiz-question">¿Cuántas personas con diabetes hay por cada 18 habitantes en Ecuador?</div>
+                <div class="quiz-option" onclick="checkAnswer(this, true)">1 persona</div>
+                <div class="quiz-option" onclick="checkAnswer(this, false)">3 personas</div>
+                <div class="quiz-option" onclick="checkAnswer(this, false)">5 personas</div>
+                <div id="quiz-feedback" style="margin-top: 10px; font-weight: bold; display: none;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">
+        <span id="notification-text"></span>
+    </div>
+    
+    <footer>
+        <p>Datos del MSP Ecuador e INEC | ¡Cuida tu salud! | © 2023</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Inicializar el mapa
+        const map = L.map('map').setView([-2.1894, -79.8891], 9);
+        
+        // Capa base colorida
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap, © CartoDB'
+        }).addTo(map);
+        
+        // Variables globales para los marcadores
+        let cantonMarkers = [];
+        let healthCenterMarkers = [];
+        let marketMarkers = [];
+        let parkMarkers = [];
+        
+        // Datos de prevalencia por cantón
+        const cantones = {
+            "Guayaquil": { 
+                prevalence: 7.2, 
+                position: [-2.1962, -79.8862],
+                color: 'red',
+                problemas: ["Contaminación", "Obesidad", "Sedentarismo"],
+                soluciones: ["Tamizajes gratuitos", "Ciclovías nuevas"],
+                tamizajeLinks: [
+                    {name: "Protocolo coordinaciones", url: "https://extranet.who.int/ncdccs/Data/ECU_D1_protocolo%20coordinaciones.pdf"}
+                ],
+                prevencionLinks: [
+                    {name: "Programa IESS", url: "https://www.iess.gob.ec/es/web/mobile/home/-/asset_publisher/0hbG/content/el-iess-presenta-en-guayaquil-programa-de-prevencion-y-control-de-diabetes-mellitus/10174"},
+                    {name: "Clubes diabéticos", url: "https://www.guayaquil.gob.ec/existen-clubes-diabeticos-participantes-red-salud-municipal/"}
+                ],
+                mercadoLinks: [
+                    {name: "Guía alimentación", url: "https://www.salud.gob.ec/wp-content/uploads/2013/11/GUIA-DE-ALIMENTACION-PADRES-DE-FAMILIA-jul2017.pdf"}
+                ]
+            },
+            "Durán": { 
+                prevalence: 6.8, 
+                position: [-2.2076, -79.8285],
+                color: 'orange',
+                problemas: ["Pobreza", "Alta densidad"],
+                soluciones: ["Programas nutricionales"],
+                tamizajeLinks: [
+                    {name: "Noticia El Comercio", url: "https://www.elcomercio.com/sociedad/ministerio-salud-implementa-programa-atencion-diabetes-mellitus/"},
+                    {name: "Hospital Básico Duran", url: "https://www.iess.gob.ec/noticias/-/asset_publisher/4DHq/content/hospital-basico-duran-en-pie-de-lucha-contra-la-diabetes/10174"}
+                ],
+                prevencionLinks: [
+                    {name: "Acciones MSP", url: "https://www.salud.gob.ec/msp-fortalece-acciones-de-promocion-y-prevencion-de-la-salud-en-el-canton-duran/"}
+                ]
+            },
+            "Samborondón": { 
+                prevalence: 5.5, 
+                position: [-2.1728, -79.7386],
+                color: 'green',
+                problemas: ["Dietas altas en grasa"],
+                soluciones: ["Parques amplios", "Clínicas privadas"],
+                tamizajeLinks: [
+                    {name: "Perfiles PAHO", url: "https://www.paho.org/es/tag/perfiles-carga-enfermedad-diabetes-2023?page=1"},
+                    {name: "Datos estadísticos", url: "https://www.paho.org/es/datos-estadisticos?page=1"}
+                ],
+                mercadoLinks: [
+                    {name: "Dieta para diabetes", url: "https://fundaciondelcorazon.com/nutricion/dieta/1252-dieta-para-la-diabetes.html"},
+                    {name: "Guía Mayo Clinic", url: "https://www.mayoclinic.org/es/diseases-conditions/diabetes/in-depth/diabetes-diet/art-20044295"}
+                ]
+            }
+        };
+        
+        // Añadir marcadores de cantones con emojis y efectos
+        Object.keys(cantones).forEach(canton => {
+            const data = cantones[canton];
+            const emoji = data.color === 'red' ? '🔥' : data.color === 'orange' ? '⚠️' : '✅';
+            
+            const marker = L.circleMarker(data.position, {
+                radius: 20,
+                fillColor: data.color,
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).bindPopup(`
+                <div style="text-align:center;">
+                    <h3 style="color:${data.color}; margin:5px 0;">${emoji} ${canton} ${emoji}</h3>
+                    <p><b>Prevalencia DM2:</b> ${data.prevalence}%</p>
+                    <hr>
+                    <p><b>Problemas:</b> ${data.problemas.join(', ')}</p>
+                    <p><b>Soluciones:</b> ${data.soluciones.join(', ')}</p>
+                    <button 
+                        style="background:${data.color}; color:white; border:none; padding:5px 10px; border-radius:5px; margin-top:5px;"
+                        onclick="showCantonDetail('${canton}')"
+                    >
+                        ¡Más info!
+                    </button>
+                </div>
+            `).addTo(map);
+            
+            cantonMarkers.push(marker);
+        });
+        
+        // Capa de centros de salud con iconos FA
+        const centrosSalud = [
+            { name: "Hospital Guayaquil", position: [-2.1916, -79.8876], servicios: ["Tamizaje", "Nutricionista"] },
+            { name: "Centro Salud Durán", position: [-2.2076, -79.8285], servicios: ["Tamizaje"] },
+            { name: "Clínica Samborondón", position: [-2.1728, -79.7386], servicios: ["Tamizaje", "Educación"] }
+        ];
+        
+        centrosSalud.forEach(centro => {
+            const marker = L.marker(centro.position, {
+                icon: L.divIcon({
+                    html: '<div style="background:#339AF0; color:white; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-hospital"></i></div>',
+                    className: '',
+                    iconSize: [30, 30]
+                })
+            }).bindPopup(`
+                <div style="text-align:center;">
+                    <h3 style="color:#339AF0;"><i class="fas fa-hospital"></i> ${centro.name}</h3>
+                    <p><b>Servicios:</b> ${centro.servicios.join(', ')}</p>
+                    <button 
+                        style="background:#339AF0; color:white; border:none; padding:5px 10px; border-radius:5px; margin-top:5px;"
+                        onclick="window.open('https://www.salud.gob.ec/', '_blank')"
+                    >
+                        Ver horarios
+                    </button>
+                </div>
+            `).addTo(map);
+            
+            healthCenterMarkers.push(marker);
+        });
+        
+        // Capa de mercados saludables
+        const mercados = [
+            { name: "Mercado Caraguay", position: [-2.1816, -79.8776], productos: ["Frutas", "Verduras", "Precios bajos"], link: "https://www.salud.gob.ec/wp-content/uploads/2021/03/Manual_Mercados_Saludables_final-25.04.2016.pdf" },
+            { name: "Mercado Saludable", position: [-2.1628, -79.7286], productos: ["Orgánicos", "Sin pesticidas"], link: "https://www.salud.gob.ec/wp-content/uploads/2013/11/GUIA-DE-ALIMENTACION-PADRES-DE-FAMILIA-jul2017.pdf" }
+        ];
+        
+        mercados.forEach(mercado => {
+            const marker = L.marker(mercado.position, {
+                icon: L.divIcon({
+                    html: '<div style="background:#9C36B5; color:white; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-shopping-basket"></i></div>',
+                    className: '',
+                    iconSize: [30, 30]
+                })
+            }).bindPopup(`
+                <div style="text-align:center;">
+                    <h3 style="color:#9C36B5;"><i class="fas fa-shopping-basket"></i> ${mercado.name}</h3>
+                    <p><b>Productos saludables:</b> ${mercado.productos.join(', ')}</p>
+                    <button 
+                        style="background:#9C36B5; color:white; border:none; padding:5px 10px; border-radius:5px; margin-top:5px;"
+                        onclick="window.open('${mercado.link}', '_blank')"
+                    >
+                        Ver información nutricional
+                    </button>
+                </div>
+            `).addTo(map);
+            
+            marketMarkers.push(marker);
+        });
+        
+        // Capa de parques
+        const parques = [
+            { name: "Parque Samanes", position: [-2.0986, -79.9609], actividades: ["Caminata", "Ciclismo", "Yoga"] },
+            { name: "Malecón 2000", position: [-2.1956, -79.8825], actividades: ["Caminata", "Ejercicios al aire libre"] },
+            { name: "Parque Seminario", position: [-2.1925, -79.8806], actividades: ["Caminata", "Relajación"] }
+        ];
+        
+        parques.forEach(parque => {
+            const marker = L.marker(parque.position, {
+                icon: L.divIcon({
+                    html: '<div style="background:#51CF66; color:white; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-tree"></i></div>',
+                    className: '',
+                    iconSize: [30, 30]
+                })
+            }).bindPopup(`
+                <div style="text-align:center;">
+                    <h3 style="color:#51CF66;"><i class="fas fa-tree"></i> ${parque.name}</h3>
+                    <p><b>Actividades recomendadas:</b> ${parque.actividades.join(', ')}</p>
+                    <button 
+                        style="background:#51CF66; color:white; border:none; padding:5px 10px; border-radius:5px; margin-top:5px;"
+                        onclick="window.open('https://www.google.com/maps/search/${parque.name.replace(' ', '+')}', '_blank')"
+                    >
+                        Cómo llegar
+                    </button>
+                </div>
+            `).addTo(map);
+            
+            parkMarkers.push(marker);
+        });
+        
+        // Ocultar todos los marcadores de parques inicialmente
+        parkMarkers.forEach(marker => marker.remove());
+        
+        // Función para mostrar detalles del cantón
+        window.showCantonDetail = function(canton) {
+            const data = cantones[canton];
+            const sidebar = document.querySelector('.sidebar');
+            
+            sidebar.innerHTML = `
+                <div style="text-align:center; margin-bottom:20px;">
+                    <button 
+                        onclick="location.reload()" 
+                        style="background:#2F3640; color:white; border:none; padding:8px 15px; border-radius:5px;"
+                    >
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </button>
+                </div>
+                
+                <div class="info-panel">
+                    <h2 style="color:${data.color}; text-align:center;">${canton}</h2>
+                    
+                    <div class="data-card" style="background:${data.color === 'red' ? '#FFEEEE' : data.color === 'orange' ? '#FFF5EE' : '#EEFFEE'};">
+                        <h3><i class="fas fa-chart-pie"></i> Estadísticas</h3>
+                        <p><b>Prevalencia DM2:</b> ${data.prevalence}%</p>
+                        <p><b>Comparación nacional:</b> ${data.prevalence > 5.53 ? 'Mayor' : 'Menor'} que el promedio</p>
+                    </div>
+                    
+                    <div class="data-card">
+                        <h3><i class="fas fa-exclamation-circle"></i> Problemas principales</h3>
+                        <ul>
+                            ${data.problemas.map(p => `<li>${p}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="solution-card">
+                        <h3><i class="fas fa-clipboard-check"></i> Programas de Tamizaje</h3>
+                        <ul>
+                            ${data.tamizajeLinks ? data.tamizajeLinks.map(link => 
+                                `<li><a href="${link.url}" target="_blank">${link.name}</a></li>`
+                            ).join('') : '<li>No hay información específica</li>'}
+                        </ul>
+                    </div>
+                    
+                    <div class="solution-card">
+                        <h3><i class="fas fa-shield-alt"></i> Programas de Prevención</h3>
+                        <ul>
+                            ${data.prevencionLinks ? data.prevencionLinks.map(link => 
+                                `<li><a href="${link.url}" target="_blank">${link.name}</a></li>`
+                            ).join('') : '<li>No hay información específica</li>'}
+                        </ul>
+                    </div>
+                    
+                    ${data.mercadoLinks ? `
+                    <div class="solution-card">
+                        <h3><i class="fas fa-shopping-basket"></i> Guías de Alimentación</h3>
+                        <ul>
+                            ${data.mercadoLinks.map(link => 
+                                `<li><a href="${link.url}" target="_blank">${link.name}</a></li>`
+                            ).join('')}
+                        </ul>
+                    </div>` : ''}
+                    
+                    <div class="solution-card">
+                        <h3><i class="fas fa-lightbulb"></i> Soluciones en marcha</h3>
+                        <ul>
+                            ${data.soluciones.map(s => `<li>${s}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="text-align:center; margin-top:20px;">
+                    <img src="https://img.icons8.com/color/96/000000/diabetes.png" alt="Diabetes" width="80">
+                    <p style="font-size:12px; color:#666;">¡Infórmate y prevén la diabetes!</p>
+                </div>
+            `;
+            
+            // Mover el mapa al cantón seleccionado
+            map.flyTo(data.position, 12);
+        };
+        
+        // Función para el quiz
+        window.checkAnswer = function(element, isCorrect) {
+            const feedback = document.getElementById('quiz-feedback');
+            const options = document.querySelectorAll('.quiz-option');
+            
+            options.forEach(opt => {
+                opt.style.background = '#fff';
+                opt.style.color = '#333';
+            });
+            
+            if (isCorrect) {
+                element.style.background = '#51CF66';
+                element.style.color = 'white';
+                feedback.textContent = '¡Correcto! 👏 Según STEPS 2018, 1 de cada 18 ecuatorianos tiene diabetes.';
+                showNotification('¡Respuesta correcta! Bien hecho.');
+            } else {
+                element.style.background = '#FF6B6B';
+                element.style.color = 'white';
+                feedback.textContent = '¡Ups! 😅 La respuesta correcta es: 1 persona cada 18 habitantes.';
+                showNotification('Respuesta incorrecta. Sigue aprendiendo.');
+            }
+            
+            feedback.style.display = 'block';
+        };
+        
+        // Función para las pestañas
+        function openTab(evt, tabName) {
+            const tabcontent = document.getElementsByClassName("tabcontent");
+            for (let i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            
+            const tablinks = document.getElementsByClassName("tablinks");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+        
+        // Funciones para los botones
+        window.highlightHealthCenters = function() {
+            // Centrar el mapa en los centros de salud
+            const group = new L.featureGroup(healthCenterMarkers);
+            map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            
+            // Animación de los marcadores
+            healthCenterMarkers.forEach(marker => {
+                marker.setStyle({ fillOpacity: 1 });
+                marker.bounce(3);
+            });
+            
+            showNotification('Centros de salud destacados en el mapa');
+        };
+        
+        window.highlightParks = function() {
+            // Mostrar todos los marcadores de parques
+            parkMarkers.forEach(marker => marker.addTo(map));
+            
+            // Centrar el mapa en los parques
+            const group = new L.featureGroup(parkMarkers);
+            map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            
+            // Animación de los marcadores
+            parkMarkers.forEach(marker => {
+                marker.bounce(3);
+            });
+            
+            showNotification('Parques para ejercicio destacados en el mapa');
+        };
+        
+        window.highlightMarkets = function() {
+            // Centrar el mapa en los mercados
+            const group = new L.featureGroup(marketMarkers);
+            map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            
+            // Animación de los marcadores
+            marketMarkers.forEach(marker => {
+                marker.bounce(3);
+            });
+            
+            showNotification('Mercados saludables destacados en el mapa');
+        };
+        
+        window.filterMarkers = function(type) {
+            // Resetear todos los marcadores
+            cantonMarkers.forEach(marker => {
+                marker.setStyle({ fillOpacity: 0.8 });
+            });
+            
+            healthCenterMarkers.forEach(marker => {
+                marker.setStyle({ fillOpacity: 0.8 });
+            });
+            
+            marketMarkers.forEach(marker => {
+                marker.setStyle({ fillOpacity: 0.8 });
+            });
+            
+            parkMarkers.forEach(marker => {
+                marker.setStyle({ fillOpacity: 0.8 });
+            });
+            
+            // Resaltar según el tipo seleccionado
+            switch(type) {
+                case 'red':
+                    cantonMarkers.filter(m => m.options.fillColor === 'red').forEach(marker => {
+                        marker.setStyle({ fillOpacity: 1 });
+                        marker.bounce(2);
+                    });
+                    showNotification('Áreas de alto riesgo de diabetes resaltadas');
+                    break;
+                case 'orange':
+                    cantonMarkers.filter(m => m.options.fillColor === 'orange').forEach(marker => {
+                        marker.setStyle({ fillOpacity: 1 });
+                        marker.bounce(2);
+                    });
+                    showNotification('Áreas de riesgo medio de diabetes resaltadas');
+                    break;
+                case 'green':
+                    cantonMarkers.filter(m => m.options.fillColor === 'green').forEach(marker => {
+                        marker.setStyle({ fillOpacity: 1 });
+                        marker.bounce(2);
+                    });
+                    showNotification('Áreas de bajo riesgo de diabetes resaltadas');
+                    break;
+                case 'blue':
+                    healthCenterMarkers.forEach(marker => {
+                        marker.setStyle({ fillOpacity: 1 });
+                        marker.bounce(2);
+                    });
+                    showNotification('Centros de salud resaltados');
+                    break;
+                case 'purple':
+                    marketMarkers.forEach(marker => {
+                        marker.setStyle({ fillOpacity: 1 });
+                        marker.bounce(2);
+                    });
+                    showNotification('Mercados saludables resaltados');
+                    break;
+                case 'dark':
+                    // Aquí podrías añadir marcadores de zonas contaminadas si los tuvieras
+                    showNotification('No hay datos de zonas contaminadas disponibles');
+                    break;
+            }
+        };
+        
+        window.flyTo = function(canton) {
+            const data = cantones[canton];
+            map.flyTo(data.position, 12);
+            
+            // Resaltar el marcador del cantón
+            cantonMarkers.forEach(marker => {
+                if (marker.options.fillColor === data.color && 
+                    marker.getLatLng().lat === data.position[0] && 
+                    marker.getLatLng().lng === data.position[1]) {
+                    marker.setStyle({ fillOpacity: 1 });
+                    marker.bounce(3);
+                } else {
+                    marker.setStyle({ fillOpacity: 0.5 });
+                }
+            });
+            
+            showNotification(`Mostrando información de ${canton}`);
+        };
+        
+        window.showNotification = function(text) {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notification-text');
+            
+            notificationText.textContent = text;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        };
+        
+        window.animateProgress = function(id, percent) {
+            const progressBar = document.getElementById(id);
+            progressBar.style.width = `${percent}%`;
+        };
+        
+        window.showMortalityChart = function() {
+            showNotification('Gráfico de mortalidad mostrado (simulación)');
+            // Aquí podrías implementar un gráfico real con una biblioteca como Chart.js
+        };
+        
+        window.showRiskFactors = function() {
+            showNotification('Factores de riesgo mostrados (simulación)');
+        };
+        
+        window.showFoodWarning = function() {
+            showNotification('¡Cuidado con los alimentos procesados!');
+        };
+        
+        window.showNutritionGuide = function() {
+            showNotification('Abriendo guía nutricional...');
+            window.open('https://www.salud.gob.ec/wp-content/uploads/2013/11/GUIA-DE-ALIMENTACION-PADRES-DE-FAMILIA-jul2017.pdf', '_blank');
+        };
+        
+        window.showVideo = function() {
+            showNotification('Reproduciendo video educativo...');
+        };
+        
+        window.showVideoFullscreen = function() {
+            showNotification('Mostrando video en pantalla completa...');
+            // Aquí podrías implementar la funcionalidad de pantalla completa
+        };
+        
+        // Añadir animación de rebote a los marcadores
+        L.Marker.prototype.bounce = function(times = 3, duration = 200) {
+            const marker = this;
+            const icon = marker.getElement();
+            
+            if (!icon) return;
+            
+            let count = 0;
+            
+            function bounce() {
+                icon.style.transform = 'translateY(-10px)';
+                setTimeout(() => {
+                    icon.style.transform = 'translateY(0)';
+                    
+                    if (++count < times) {
+                        setTimeout(bounce, duration);
+                    }
+                }, duration);
+            }
+            
+            bounce();
+        };
+        
+        // Mostrar notificación de bienvenida
+        setTimeout(() => {
+            showNotification('¡Bienvenido! Explora los datos de diabetes en Guayas');
+        }, 1000);
+        
+        // Cerrar intro automáticamente después de 10 segundos
+        setTimeout(function(){
+            const intro = document.querySelector('.intro-container');
+            if(intro) intro.remove();
+        }, 10000);
+    </script>
+</body>
+</html>
